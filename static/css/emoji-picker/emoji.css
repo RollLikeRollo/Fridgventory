@@ -1,0 +1,111 @@
+/* Emoji Picker CSS */
+.emoji-picker {
+  position: absolute;
+  z-index: 1000;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  max-height: 300px;
+  width: 280px;
+  overflow-y: auto;
+}
+
+.emoji-picker-container {
+  position: relative;
+  display: inline-block;
+}
+
+.emoji-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1.2rem;
+  min-width: 4rem;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.emoji-picker-trigger:hover {
+  border-color: var(--primary);
+}
+
+.emoji-picker-trigger:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.emoji-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  transition: background-color 0.2s ease;
+}
+
+.emoji-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.emoji-categories {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.emoji-category {
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.emoji-category:hover,
+.emoji-category.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.emoji-search {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.emoji-search:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .emoji-picker {
+    background: var(--bg-dark, #1f2937);
+    border-color: var(--border-dark, #374151);
+  }
+}

@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content="{{ csrf_token }}" />
   <title>Fridgventory</title>
   <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/emoji-picker/emoji.css" />
   <script>
     (function() {
       const KEY = 'theme';
@@ -110,7 +112,9 @@
       <a href="{% url 'inventory:index' %}" class="logo-link">
         <img src="{% static 'media/logo.jpeg' %}" alt="Fridgventory Logo" class="logo">
       </a>
-      <h1>Fridgventory</h1>
+      <a href="{% url 'inventory:index' %}" class="title-link" style="text-decoration: none;">
+        <h1>Fridgventory</h1>
+      </a>
     </div>
 
     <!-- Hamburger menu button for mobile -->
@@ -131,6 +135,10 @@
         <a href="{% url 'inventory:item_create' %}" class="nav-link">
           <span class="nav-icon">➕</span>
           <span class="nav-text">{% trans "Add Item" %}</span>
+        </a>
+        <a href="{% url 'inventory:settings' %}" class="nav-link">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-text">{% trans "Settings" %}</span>
         </a>
         <a href="{% url 'inventory:shopping_list_text' %}" class="nav-link">
           <span class="nav-icon">📝</span>
@@ -163,5 +171,8 @@
   <main>
     {% block content %}{% endblock %}
   </main>
+  
+  <!-- Emoji Picker JavaScript -->
+  <script src="/static/js/emoji-picker/emoji-picker.js"></script>
 </body>
 </html>

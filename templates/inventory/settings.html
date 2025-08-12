@@ -1,0 +1,231 @@
+{% extends 'inventory/base.html' %}
+{% load i18n %}
+{% block content %}
+  <div class="page-header">
+    <h2>{% trans "Settings" %}</h2>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-column">
+      <div class="section-header">
+        <h3>{% trans "Tags" %}</h3>
+        <form action="{% url 'inventory:tag_create' %}" method="post" class="inline-form">
+          {% csrf_token %}
+          <input type="text" name="name" placeholder="{% trans 'New tag name' %}" required>
+          <button type="submit" class="btn btn-primary">{% trans "Add Tag" %}</button>
+        </form>
+      </div>
+      
+      <div class="items-list">
+        {% for tag in tags %}
+          <div class="item-row settings" id="tag-{{ tag.id }}">
+            <div class="item-name-with-tag">
+              <span class="tag colored-tag" style="background-color: {{ tag.color }}; border-color: {{ tag.color }};">
+                <span class="tag-emoji">{{ tag.emoji }}</span>
+                <span class="tag-name">{{ tag.name }}</span>
+              </span>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'inventory:tag_edit' tag.id %}" class="btn btn-sm btn-secondary">{% trans "Edit" %}</a>
+              <a href="{% url 'inventory:tag_delete' tag.id %}" class="btn btn-sm btn-danger">{% trans "Delete" %}</a>
+            </div>
+          </div>
+        {% empty %}
+          <p class="empty-message">{% trans "No tags yet." %}</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="settings-column">
+      <div class="section-header">
+        <h3>{% trans "Locations" %}</h3>
+        <form action="{% url 'inventory:location_create' %}" method="post" class="inline-form">
+          {% csrf_token %}
+          <input type="text" name="name" placeholder="{% trans 'New location name' %}" required>
+          <button type="submit" class="btn btn-primary">{% trans "Add Location" %}</button>
+        </form>
+      </div>
+      
+      <div class="items-list">
+        {% for location in locations %}
+          <div class="item-row settings" id="location-{{ location.id }}">
+            <div class="item-name-with-tag">
+              <span class="tag colored-tag" style="background-color: {{ location.color }}; border-color: {{ location.color }};">
+                <span class="tag-emoji">{{ location.emoji }}</span>
+                <span class="tag-name">{{ location.name }}</span>
+              </span>
+            </div>
+            <div class="item-actions">
+              <a href="{% url 'inventory:location_edit' location.id %}" class="btn btn-sm btn-secondary">{% trans "Edit" %}</a>
+              <a href="{% url 'inventory:location_delete' location.id %}" class="btn btn-sm btn-danger">{% trans "Delete" %}</a>
+            </div>
+          </div>
+        {% empty %}
+          <p class="empty-message">{% trans "No locations yet." %}</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Default Settings Section -->
+  <div class="defaults-section">
+    <h3>{% trans "Default Colors & Emojis" %}</h3>
+    <p>{% trans "Configure the default colors and emojis that will be used when creating new tags and locations that don't match any automatic patterns." %}</p>
+    
+    <form method="post" action="{% url 'inventory:update_defaults' %}" class="defaults-form">
+      {% csrf_token %}
+      
+      <div class="defaults-column">
+        <h4>🏷️ {% trans "Tags" %}</h4>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="default_tag_color">{% trans "Default Color" %}</label>
+            <div class="color-input-wrapper">
+              <input type="color" id="default_tag_color" name="default_tag_color" value="{{ user_settings.default_tag_color }}" class="color-picker">
+              <input type="text" id="default_tag_color_text" name="default_tag_color_text" value="{{ user_settings.default_tag_color }}" pattern="^#[0-9A-Fa-f]{6}$" class="color-text">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="default_tag_emoji">{% trans "Default Emoji" %}</label>
+            <input type="text" id="default_tag_emoji" name="default_tag_emoji" value="{{ user_settings.default_tag_emoji }}" data-emojiable="true" data-emoji-input="unicode">
+          </div>
+        </div>
+        
+        <div class="defaults-preview">
+          <span>{% trans "Preview:" %}</span>
+          <span class="tag colored-tag" id="tag-defaults-preview" style="background-color: {{ user_settings.default_tag_color }}; border-color: {{ user_settings.default_tag_color }};">
+            <span class="tag-emoji" id="tag-emoji-preview">{{ user_settings.default_tag_emoji }}</span>
+            <span class="tag-name">{% trans "Sample Tag" %}</span>
+          </span>
+        </div>
+      </div>
+      
+      <div class="defaults-column">
+        <h4>📍 {% trans "Locations" %}</h4>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="default_location_color">{% trans "Default Color" %}</label>
+            <div class="color-input-wrapper">
+              <input type="color" id="default_location_color" name="default_location_color" value="{{ user_settings.default_location_color }}" class="color-picker">
+              <input type="text" id="default_location_color_text" name="default_location_color_text" value="{{ user_settings.default_location_color }}" pattern="^#[0-9A-Fa-f]{6}$" class="color-text">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="default_location_emoji">{% trans "Default Emoji" %}</label>
+            <input type="text" id="default_location_emoji" name="default_location_emoji" value="{{ user_settings.default_location_emoji }}" data-emojiable="true" data-emoji-input="unicode">
+          </div>
+        </div>
+        
+        <div class="defaults-preview">
+          <span>{% trans "Preview:" %}</span>
+          <span class="tag colored-tag" id="location-defaults-preview" style="background-color: {{ user_settings.default_location_color }}; border-color: {{ user_settings.default_location_color }};">
+            <span class="tag-emoji" id="location-emoji-preview">{{ user_settings.default_location_emoji }}</span>
+            <span class="tag-name">{% trans "Sample Location" %}</span>
+          </span>
+        </div>
+      </div>
+      
+      <div class="defaults-actions">
+        <button type="submit" class="btn btn-primary">{% trans "Save Defaults" %}</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="back-link">
+    <a href="{% url 'inventory:index' %}" class="btn btn-secondary">{% trans "Back to Items" %}</a>
+  </div>
+
+  <script>
+    // Initialize emoji picker and defaults form
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize emoji picker for this page
+      if (window.emojiPicker) {
+        window.emojiPicker.discover();
+      }
+      
+      setupDefaultsForm();
+    });
+    
+    // Defaults form JavaScript
+    function setupDefaultsForm() {
+      // Tag defaults
+      const tagColorPicker = document.getElementById('default_tag_color');
+      const tagColorText = document.getElementById('default_tag_color_text');
+      const tagEmojiInput = document.getElementById('default_tag_emoji');
+      const tagPreview = document.getElementById('tag-defaults-preview');
+      const tagEmojiPreview = document.getElementById('tag-emoji-preview');
+      
+      // Location defaults
+      const locationColorPicker = document.getElementById('default_location_color');
+      const locationColorText = document.getElementById('default_location_color_text');
+      const locationEmojiInput = document.getElementById('default_location_emoji');
+      const locationPreview = document.getElementById('location-defaults-preview');
+      const locationEmojiPreview = document.getElementById('location-emoji-preview');
+      
+      function updateTagPreview() {
+        const color = tagColorPicker.value || tagColorText.value;
+        tagPreview.style.backgroundColor = color;
+        tagPreview.style.borderColor = color;
+        
+        // Handle emoji from hidden input (emoji picker creates hidden input)
+        const hiddenTagEmojiInput = document.querySelector('input[name="default_tag_emoji"]');
+        const emojiValue = hiddenTagEmojiInput ? hiddenTagEmojiInput.value : (tagEmojiInput ? tagEmojiInput.value : '{{ user_settings.default_tag_emoji }}');
+        tagEmojiPreview.textContent = emojiValue || '{{ user_settings.default_tag_emoji }}';
+      }
+      
+      function updateLocationPreview() {
+        const color = locationColorPicker.value || locationColorText.value;
+        locationPreview.style.backgroundColor = color;
+        locationPreview.style.borderColor = color;
+        
+        // Handle emoji from hidden input (emoji picker creates hidden input)
+        const hiddenLocationEmojiInput = document.querySelector('input[name="default_location_emoji"]');
+        const emojiValue = hiddenLocationEmojiInput ? hiddenLocationEmojiInput.value : (locationEmojiInput ? locationEmojiInput.value : '{{ user_settings.default_location_emoji }}');
+        locationEmojiPreview.textContent = emojiValue || '{{ user_settings.default_location_emoji }}';
+      }
+      
+      // Tag event listeners
+      tagColorPicker.addEventListener('input', function() {
+        tagColorText.value = tagColorPicker.value;
+        updateTagPreview();
+      });
+      
+      tagColorText.addEventListener('input', function() {
+        if (tagColorText.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+          tagColorPicker.value = tagColorText.value;
+        }
+        updateTagPreview();
+      });
+      
+      // Location event listeners
+      locationColorPicker.addEventListener('input', function() {
+        locationColorText.value = locationColorPicker.value;
+        updateLocationPreview();
+      });
+      
+      locationColorText.addEventListener('input', function() {
+        if (locationColorText.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+          locationColorPicker.value = locationColorText.value;
+        }
+        updateLocationPreview();
+      });
+      
+      // Listen for emoji changes from pickers
+      document.addEventListener('change', function(e) {
+        if (e.target.name === 'default_tag_emoji') {
+          updateTagPreview();
+        } else if (e.target.name === 'default_location_emoji') {
+          updateLocationPreview();
+        }
+      });
+      
+      // Initial preview updates
+      updateTagPreview();
+      updateLocationPreview();
+    }
+  </script>
+{% endblock %}

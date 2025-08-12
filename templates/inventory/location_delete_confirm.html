@@ -1,0 +1,20 @@
+{% extends 'inventory/base.html' %}
+{% load i18n %}
+{% block content %}
+  <div class="page-header">
+    <h2>{% trans "Delete Location" %}</h2>
+  </div>
+
+  <div class="delete-confirm">
+    <p>{% blocktrans with name=location.name %}Are you sure you want to delete the location "{{ name }}"?{% endblocktrans %}</p>
+    <p class="warning">{% trans "This action cannot be undone. The location will be removed from all items." %}</p>
+    
+    <form method="post" class="form">
+      {% csrf_token %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-danger">{% trans "Delete Location" %}</button>
+        <a href="{% url 'inventory:settings' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

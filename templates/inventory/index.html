@@ -8,35 +8,83 @@
       <span class="btn-text">{% trans "Add Item" %}</span>
     </a>
   </div>
-  <table>
+
+  <!-- Search and Filter Controls -->
+  <div class="table-controls">
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input 
+        type="text" 
+        id="item-search" 
+        placeholder="{% trans 'Search items, tags, or locations...' %}" 
+        class="search-input"
+      >
+    </div>
+    <div class="table-info">
+      <span id="items-count">{{ items|length }}</span> {% trans "items" %} 
+      (<span id="visible-count">{{ items|length }}</span> {% trans "visible" %})
+    </div>
+  </div>
+
+  <table id="items-table">
     <thead>
       <tr>
-        <th>{% trans "Name" %}</th>
-        <th>{% trans "Desired" %}</th>
-        <th>{% trans "Current" %}</th>
-        <th>{% trans "Missing" %}</th>
-        <th>{% trans "Locations" %}</th>
-        <th>{% trans "Tags" %}</th>
-        <th></th>
+        <th class="sortable" data-column="name" data-type="text">
+          {% trans "Name" %} <span class="sort-indicator"></span>
+        </th>
+        <th class="sortable" data-column="desired" data-type="number">
+          {% trans "Desired" %} <span class="sort-indicator"></span>
+        </th>
+        <th class="sortable" data-column="current" data-type="number">
+          {% trans "Current" %} <span class="sort-indicator"></span>
+        </th>
+        <th class="sortable" data-column="missing" data-type="number">
+          {% trans "Missing" %} <span class="sort-indicator"></span>
+        </th>
+        <th class="sortable" data-column="locations" data-type="text">
+          {% trans "Locations" %} <span class="sort-indicator"></span>
+        </th>
+        <th class="sortable" data-column="tags" data-type="text">
+          {% trans "Tags" %} <span class="sort-indicator"></span>
+        </th>
+        <th>{% trans "Actions" %}</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="items-tbody">
       {% for item in items %}
-      <tr>
-        <td>{{ item.name }}</td>
-        <td>{{ item.desired_quantity }}</td>
-        <td>{{ item.current_quantity }}</td>
-        <td>{{ item.missing_quantity }}</td>
-        <td>
+      <tr class="item-row" data-item-id="{{ item.id }}" data-name="{{ item.name|lower }}" data-desired="{{ item.desired_quantity }}" data-current="{{ item.current_quantity }}" data-missing="{{ item.missing_quantity }}">
+        <td data-sort="name" class="editable-field" data-field="name" title="{% trans 'Double-click to edit' %}">{{ item.name }}</td>
+        <td data-sort="desired" class="editable-field" data-field="desired_quantity" title="{% trans 'Double-click to edit' %}">{{ item.desired_quantity }}</td>
+        <td data-sort="current" class="quantity-cell">
+          <div class="quantity-controls">
+            <button class="quantity-btn quantity-decrease" data-item-id="{{ item.id }}" data-action="decrease" title="{% trans 'Decrease quantity' %}">➖</button>
+            <span class="editable-field quantity-value" data-field="current_quantity" title="{% trans 'Double-click to edit' %}">{{ item.current_quantity }}</span>
+            <button class="quantity-btn quantity-increase" data-item-id="{{ item.id }}" data-action="increase" title="{% trans 'Increase quantity' %}">➕</button>
+          </div>
+        </td>
+        <td data-sort="missing">{{ item.missing_quantity }}</td>
+        <td data-sort="locations">
           {% for loc in item.locations.all %}
-            <span class="tag">{{ loc.name }}</span>
+            <a href="{% url 'inventory:settings' %}#location-{{ loc.id }}" 
+               class="tag clickable-tag colored-tag" 
+               style="background-color: {{ loc.color }}; border-color: {{ loc.color }};"
+               title="{% trans 'Manage this location' %}">
+              <span class="tag-emoji">{{ loc.emoji }}</span>
+              <span class="tag-name">{{ loc.name }}</span>
+            </a>
           {% empty %}
             —
           {% endfor %}
         </td>
-        <td>
+        <td data-sort="tags">
           {% for tag in item.tags.all %}
-            <span class="tag">{{ tag.name }}</span>
+            <a href="{% url 'inventory:settings' %}#tag-{{ tag.id }}" 
+               class="tag clickable-tag colored-tag" 
+               style="background-color: {{ tag.color }}; border-color: {{ tag.color }};"
+               title="{% trans 'Manage this tag' %}">
+              <span class="tag-emoji">{{ tag.emoji }}</span>
+              <span class="tag-name">{{ tag.name }}</span>
+            </a>
           {% empty %}
             —
           {% endfor %}
@@ -47,8 +95,405 @@
         </td>
       </tr>
       {% empty %}
-        <tr><td colspan="7">{% trans "No items yet." %}</td></tr>
+        <tr id="no-items-row"><td colspan="7">{% trans "No items yet." %}</td></tr>
       {% endfor %}
+      <tr id="no-results-row" style="display: none;">
+        <td colspan="7" class="no-results">{% trans "No items match your search." %}</td>
+      </tr>
     </tbody>
   </table>
+
+  <script>
+    // Make URL pattern available to JavaScript with proper i18n support
+    window.updateFieldUrlPattern = "{% url 'inventory:item_update_field' 0 %}".replace('0', '{itemId}');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('item-search');
+      const table = document.getElementById('items-table');
+      const tbody = document.getElementById('items-tbody');
+      const itemRows = tbody.querySelectorAll('.item-row');
+      const noResultsRow = document.getElementById('no-results-row');
+      const visibleCountSpan = document.getElementById('visible-count');
+      const sortableHeaders = document.querySelectorAll('.sortable');
+      
+      let currentSort = { column: null, direction: 'asc' };
+      
+      // Search functionality
+      function performSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        itemRows.forEach(row => {
+          const name = row.dataset.name || '';
+          const locationText = row.querySelector('[data-sort="locations"]').textContent.toLowerCase();
+          const tagText = row.querySelector('[data-sort="tags"]').textContent.toLowerCase();
+          
+          const isVisible = !searchTerm || 
+            name.includes(searchTerm) || 
+            locationText.includes(searchTerm) || 
+            tagText.includes(searchTerm);
+          
+          row.style.display = isVisible ? '' : 'none';
+          if (isVisible) visibleCount++;
+        });
+        
+        // Show/hide no results message
+        noResultsRow.style.display = (visibleCount === 0 && searchTerm) ? '' : 'none';
+        
+        // Update visible count
+        visibleCountSpan.textContent = visibleCount;
+      }
+      
+      // Sort functionality
+      function sortTable(column, type) {
+        const rows = Array.from(itemRows);
+        const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
+        
+        rows.sort((a, b) => {
+          let aVal, bVal;
+          
+          if (type === 'number') {
+            aVal = parseInt(a.dataset[column]) || 0;
+            bVal = parseInt(b.dataset[column]) || 0;
+          } else {
+            const aCell = a.querySelector(`[data-sort="${column}"]`);
+            const bCell = b.querySelector(`[data-sort="${column}"]`);
+            aVal = aCell ? aCell.textContent.trim().toLowerCase() : '';
+            bVal = bCell ? bCell.textContent.trim().toLowerCase() : '';
+          }
+          
+          let result;
+          if (type === 'number') {
+            result = aVal - bVal;
+          } else {
+            result = aVal.localeCompare(bVal);
+          }
+          
+          return direction === 'desc' ? -result : result;
+        });
+        
+        // Reorder rows in DOM
+        rows.forEach(row => tbody.appendChild(row));
+        
+        // Update sort indicators
+        updateSortIndicators(column, direction);
+        
+        currentSort = { column, direction };
+        
+        // Re-apply search filter after sorting
+        performSearch();
+      }
+      
+      function updateSortIndicators(activeColumn, direction) {
+        sortableHeaders.forEach(header => {
+          const indicator = header.querySelector('.sort-indicator');
+          const column = header.dataset.column;
+          
+          if (column === activeColumn) {
+            indicator.textContent = direction === 'asc' ? ' ↑' : ' ↓';
+            header.classList.add('sorted');
+          } else {
+            indicator.textContent = '';
+            header.classList.remove('sorted');
+          }
+        });
+      }
+      
+      // Event listeners
+      searchInput.addEventListener('input', performSearch);
+      
+      sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          const column = this.dataset.column;
+          const type = this.dataset.type;
+          sortTable(column, type);
+        });
+      });
+      
+      // Clear search shortcut (Escape key)
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          this.value = '';
+          performSearch();
+        }
+      });
+      
+      // Focus search with Ctrl+F or Cmd+F
+      document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      });
+      
+      // Inline editing functionality
+      setupInlineEditing();
+      
+      // Quantity adjustment functionality
+      setupQuantityControls();
+    });
+    
+    // Inline editing setup
+    function setupInlineEditing() {
+      const editableFields = document.querySelectorAll('.editable-field');
+      
+      editableFields.forEach(field => {
+        field.addEventListener('dblclick', function() {
+          startEditing(this);
+        });
+      });
+    }
+    
+    function startEditing(cell) {
+      // Prevent multiple edits
+      if (cell.querySelector('input')) return;
+      
+      const originalValue = cell.textContent.trim();
+      const fieldName = cell.dataset.field;
+      const isNumberField = fieldName.includes('quantity');
+      
+      // Create input element
+      const input = document.createElement('input');
+      input.type = isNumberField ? 'number' : 'text';
+      input.value = originalValue;
+      input.className = 'inline-edit-input';
+      
+      if (isNumberField) {
+        input.min = '0';
+        input.step = '1';
+      }
+      
+      // Replace cell content with input
+      cell.innerHTML = '';
+      cell.appendChild(input);
+      cell.classList.add('editing');
+      
+      // Focus and select text
+      input.focus();
+      input.select();
+      
+      // Save on Enter, cancel on Escape
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          saveEdit(cell, input, originalValue);
+        } else if (e.key === 'Escape') {
+          cancelEdit(cell, originalValue);
+        }
+      });
+      
+      // Save on blur (clicking away)
+      input.addEventListener('blur', function() {
+        saveEdit(cell, input, originalValue);
+      });
+    }
+    
+    function saveEdit(cell, input, originalValue) {
+      const newValue = input.value.trim();
+      const fieldName = cell.dataset.field;
+      const row = cell.closest('.item-row');
+      const itemId = row.dataset.itemId;
+      
+      // If value hasn't changed, just cancel
+      if (newValue === originalValue) {
+        cancelEdit(cell, originalValue);
+        return;
+      }
+      
+      // Validate number fields
+      if (fieldName.includes('quantity')) {
+        const numValue = parseInt(newValue);
+        if (isNaN(numValue) || numValue < 0) {
+          alert('{% trans "Please enter a valid positive number" %}');
+          input.focus();
+          return;
+        }
+      }
+      
+      // Show loading state
+      cell.classList.add('saving');
+      input.disabled = true;
+      
+      // Use the generalized update function
+      updateItemField(itemId, fieldName, newValue, cell, function(success) {
+        if (success) {
+          // Update cell content
+          cell.textContent = newValue;
+          cell.classList.remove('editing', 'saving');
+          
+          // Update row data attributes
+          row.dataset[fieldName.replace('_quantity', '')] = newValue;
+          
+          // Update missing quantity if needed
+          if (fieldName.includes('quantity')) {
+            const desired = parseInt(row.dataset.desired) || 0;
+            const current = parseInt(row.dataset.current) || 0;
+            const missing = Math.max(0, desired - current);
+            
+            const missingCell = row.querySelector('[data-sort="missing"]');
+            missingCell.textContent = missing;
+            row.dataset.missing = missing;
+          }
+          
+          // Show success feedback
+          cell.classList.add('edit-success');
+          setTimeout(() => {
+            cell.classList.remove('edit-success');
+          }, 1000);
+        } else {
+          cancelEdit(cell, originalValue);
+        }
+      });
+    }
+    
+    function cancelEdit(cell, originalValue) {
+      cell.textContent = originalValue;
+      cell.classList.remove('editing', 'saving');
+    }
+    
+    function getCsrfToken() {
+      // First try to get from Django's CSRF cookie
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+          return decodeURIComponent(value);
+        }
+      }
+      
+      // Fallback to meta tag
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) {
+        return csrfMeta.getAttribute('content');
+      }
+      
+      // Last resort: try to find in forms
+      const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      if (csrfInput) {
+        return csrfInput.value;
+      }
+      
+      console.error('CSRF token not found');
+      return '';
+    }
+    
+    // Quantity adjustment functionality
+    function setupQuantityControls() {
+      const quantityButtons = document.querySelectorAll('.quantity-btn');
+      
+      quantityButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleQuantityChange(this);
+        });
+      });
+    }
+    
+    function handleQuantityChange(button) {
+      const itemId = button.dataset.itemId;
+      const action = button.dataset.action;
+      const row = button.closest('.item-row');
+      const quantityValue = row.querySelector('.quantity-value');
+      const currentValue = parseInt(quantityValue.textContent) || 0;
+      
+      // Calculate new value
+      let newValue;
+      if (action === 'increase') {
+        newValue = currentValue + 1;
+      } else if (action === 'decrease') {
+        newValue = Math.max(0, currentValue - 1); // Don't go below 0
+      }
+      
+      // Disable buttons during update
+      const allButtons = row.querySelectorAll('.quantity-btn');
+      allButtons.forEach(btn => btn.disabled = true);
+      quantityValue.classList.add('updating');
+      
+      // Update the quantity using existing AJAX system
+      updateItemField(itemId, 'current_quantity', newValue.toString(), quantityValue, function(success) {
+        // Re-enable buttons
+        allButtons.forEach(btn => btn.disabled = false);
+        quantityValue.classList.remove('updating');
+        
+        if (success) {
+          // Update the displayed value
+          quantityValue.textContent = newValue;
+          
+          // Update row data attributes
+          row.dataset.current = newValue;
+          
+          // Update missing quantity
+          const desired = parseInt(row.dataset.desired) || 0;
+          const missing = Math.max(0, desired - newValue);
+          const missingCell = row.querySelector('[data-sort="missing"]');
+          missingCell.textContent = missing;
+          row.dataset.missing = missing;
+          
+          // Show success animation
+          quantityValue.classList.add('updated');
+          setTimeout(() => {
+            quantityValue.classList.remove('updated');
+          }, 600);
+        }
+      });
+    }
+    
+    // Generalized function to update item fields (extracted from existing saveEdit function)
+    function updateItemField(itemId, fieldName, newValue, displayElement, callback) {
+      // Prepare form data
+      const csrfToken = getCsrfToken();
+      const formData = new FormData();
+      formData.append('field', fieldName);
+      formData.append('value', newValue);
+      formData.append('csrfmiddlewaretoken', csrfToken);
+      
+      // Send AJAX request using proper Django URL with i18n support
+      const updateUrl = window.updateFieldUrlPattern.replace('{itemId}', itemId);
+      
+      fetch(updateUrl, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': csrfToken,
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Response is not JSON');
+        }
+        
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          callback(true);
+        } else {
+          alert(data.error || '{% trans "Error updating item" %}');
+          callback(false);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        let errorMessage = '{% trans "Network error. Please try again." %}';
+        
+        if (error.message.includes('405')) {
+          errorMessage = 'Method not allowed. Please refresh the page and try again.';
+        } else if (error.message.includes('403')) {
+          errorMessage = 'Permission denied. Please refresh the page and try again.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Item not found. Please refresh the page.';
+        } else if (error.message.includes('Response is not JSON')) {
+          errorMessage = 'Server error. Please try again.';
+        }
+        
+        alert(errorMessage);
+        callback(false);
+      });
+    }
+  </script>
 {% endblock %}

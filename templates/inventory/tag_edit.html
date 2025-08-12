@@ -1,0 +1,99 @@
+{% extends 'inventory/base.html' %}
+{% load i18n %}
+{% block content %}
+  <div class="page-header">
+    <h2>{% trans "Edit Tag" %}</h2>
+  </div>
+
+  <form method="post" class="form">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="name">{% trans "Tag Name" %}</label>
+      <input type="text" id="name" name="name" value="{{ tag.name }}" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="color">{% trans "Color" %}</label>
+      <div class="color-input-wrapper">
+        <input type="color" id="color" name="color" value="{{ tag.color }}" class="color-picker">
+        <input type="text" id="color-text" name="color_text" value="{{ tag.color }}" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#6b7280" class="color-text">
+      </div>
+      <small class="help-text">{% trans "Choose a color for this tag" %}</small>
+    </div>
+    
+    <div class="form-group">
+      <label for="emoji">{% trans "Emoji" %}</label>
+      <input type="text" id="emoji" name="emoji" value="{{ tag.emoji }}" data-emojiable="true" data-emoji-input="unicode" placeholder="🏷️">
+      <small class="help-text">{% trans "Choose an emoji for this tag" %}</small>
+    </div>
+    
+    <div class="preview-section">
+      <label>{% trans "Preview" %}</label>
+      <div class="tag-preview">
+        <span class="tag colored-tag" id="tag-preview" style="background-color: {{ tag.color }}; border-color: {{ tag.color }};">
+          <span class="tag-emoji" id="preview-emoji">{{ tag.emoji }}</span>
+          <span class="tag-name" id="preview-name">{{ tag.name }}</span>
+        </span>
+      </div>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">{% trans "Save Changes" %}</button>
+      <a href="{% url 'inventory:settings' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </div>
+  </form>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize emoji picker for this page
+      if (window.emojiPicker) {
+        window.emojiPicker.discover();
+      }
+      
+      // Sync color picker and text input
+      const colorPicker = document.getElementById('color');
+      const colorText = document.getElementById('color-text');
+      const preview = document.getElementById('tag-preview');
+      const nameInput = document.getElementById('name');
+      const emojiInput = document.getElementById('emoji');
+      const previewName = document.getElementById('preview-name');
+      const previewEmoji = document.getElementById('preview-emoji');
+
+      function updatePreview() {
+        const color = colorPicker.value || colorText.value;
+        preview.style.backgroundColor = color;
+        preview.style.borderColor = color;
+        previewName.textContent = nameInput.value || '{{ tag.name }}';
+        
+        // Handle emoji from hidden input (emoji picker creates hidden input)
+        const hiddenEmojiInput = document.querySelector('input[name="emoji"]');
+        const emojiValue = hiddenEmojiInput ? hiddenEmojiInput.value : (emojiInput ? emojiInput.value : '{{ tag.emoji }}');
+        previewEmoji.textContent = emojiValue || '{{ tag.emoji }}';
+      }
+
+      colorPicker.addEventListener('input', function() {
+        colorText.value = colorPicker.value;
+        updatePreview();
+      });
+
+      colorText.addEventListener('input', function() {
+        if (colorText.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+          colorPicker.value = colorText.value;
+        }
+        updatePreview();
+      });
+
+      nameInput.addEventListener('input', updatePreview);
+      
+      // Listen for emoji changes from picker
+      document.addEventListener('change', function(e) {
+        if (e.target.name === 'emoji') {
+          updatePreview();
+        }
+      });
+      
+      // Initial preview update
+      updatePreview();
+    });
+  </script>
+{% endblock %}

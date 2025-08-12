@@ -1,13 +1,15 @@
 from io import BytesIO
 from typing import List
+import json
 
 from django.db.models import QuerySet
-from django.http import FileResponse, HttpRequest, HttpResponse
+from django.http import FileResponse, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
-from .models import Item, Location, Tag
+from .models import Item, Location, Tag, UserSettings
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -125,3 +127,197 @@ def generate_shopping_list_image(request: HttpRequest) -> HttpResponse:
     image.save(output, format="PNG")
     output.seek(0)
     return FileResponse(output, filename="shopping_list.png", content_type="image/png")
+
+
+def settings(request: HttpRequest) -> HttpResponse:
+    """Settings page with tag and location management."""
+    tags = Tag.objects.order_by("name").all()
+    locations = Location.objects.order_by("name").all()
+    user_settings = UserSettings.get_settings()
+    return render(request, "inventory/settings.html", {
+        "tags": tags, 
+        "locations": locations,
+        "user_settings": user_settings
+    })
+
+
+def tag_create(request: HttpRequest) -> HttpResponse:
+    """Create a new tag."""
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if name:
+            Tag.objects.get_or_create(name=name)
+        return redirect("inventory:settings")
+    return redirect("inventory:settings")
+
+
+def tag_edit(request: HttpRequest, tag_id: int) -> HttpResponse:
+    """Edit an existing tag."""
+    tag = get_object_or_404(Tag, id=tag_id)
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        color = request.POST.get("color", "").strip()
+        emoji = request.POST.get("emoji", "").strip()
+        
+        # Update name if provided and different
+        if name and name != tag.name:
+            tag.name = name
+        
+        # Update color if provided and valid
+        if color and color.startswith('#') and len(color) == 7:
+            tag.color = color
+        
+        # Update emoji if provided
+        if emoji:
+            tag.emoji = emoji
+        
+        tag.save()
+        return redirect("inventory:settings")
+    return render(request, "inventory/tag_edit.html", {"tag": tag})
+
+
+def tag_delete(request: HttpRequest, tag_id: int) -> HttpResponse:
+    """Delete a tag."""
+    tag = get_object_or_404(Tag, id=tag_id)
+    if request.method == "POST":
+        tag.delete()
+        return redirect("inventory:settings")
+    return render(request, "inventory/tag_delete_confirm.html", {"tag": tag})
+
+
+def location_create(request: HttpRequest) -> HttpResponse:
+    """Create a new location."""
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if name:
+            Location.objects.get_or_create(name=name)
+        return redirect("inventory:settings")
+    return redirect("inventory:settings")
+
+
+def location_edit(request: HttpRequest, location_id: int) -> HttpResponse:
+    """Edit an existing location."""
+    location = get_object_or_404(Location, id=location_id)
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        color = request.POST.get("color", "").strip()
+        emoji = request.POST.get("emoji", "").strip()
+        
+        # Update name if provided and different
+        if name and name != location.name:
+            location.name = name
+        
+        # Update color if provided and valid
+        if color and color.startswith('#') and len(color) == 7:
+            location.color = color
+        
+        # Update emoji if provided
+        if emoji:
+            location.emoji = emoji
+        
+        location.save()
+        return redirect("inventory:settings")
+    return render(request, "inventory/location_edit.html", {"location": location})
+
+
+def location_delete(request: HttpRequest, location_id: int) -> HttpResponse:
+    """Delete a location."""
+    location = get_object_or_404(Location, id=location_id)
+    if request.method == "POST":
+        location.delete()
+        return redirect("inventory:settings")
+    return render(request, "inventory/location_delete_confirm.html", {"location": location})
+
+
+def update_defaults(request: HttpRequest) -> HttpResponse:
+    """Update default colors and emojis for tags and locations."""
+    if request.method == "POST":
+        settings = UserSettings.get_settings()
+        
+        # Update tag defaults
+        tag_color = request.POST.get("default_tag_color", "").strip()
+        tag_emoji = request.POST.get("default_tag_emoji", "").strip()
+        
+        if tag_color and tag_color.startswith('#') and len(tag_color) == 7:
+            settings.default_tag_color = tag_color
+        
+        if tag_emoji:
+            settings.default_tag_emoji = tag_emoji
+        
+        # Update location defaults
+        location_color = request.POST.get("default_location_color", "").strip()
+        location_emoji = request.POST.get("default_location_emoji", "").strip()
+        
+        if location_color and location_color.startswith('#') and len(location_color) == 7:
+            settings.default_location_color = location_color
+        
+        if location_emoji:
+            settings.default_location_emoji = location_emoji
+        
+        settings.save()
+        
+    return redirect("inventory:settings")
+
+
+@require_POST
+def item_update_field(request: HttpRequest, item_id: int) -> JsonResponse:
+    """Update a single field of an item via AJAX."""
+    try:
+        item = get_object_or_404(Item, id=item_id)
+        field = request.POST.get('field', '').strip()
+        value = request.POST.get('value', '').strip()
+        
+        # Validate field name
+        allowed_fields = ['name', 'desired_quantity', 'current_quantity']
+        if field not in allowed_fields:
+            return JsonResponse({
+                'success': False,
+                'error': _('Invalid field name')
+            })
+        
+        # Validate and convert value
+        if field == 'name':
+            if not value:
+                return JsonResponse({
+                    'success': False,
+                    'error': _('Name cannot be empty')
+                })
+            
+            # Check for duplicate names
+            if Item.objects.filter(name=value).exclude(id=item.id).exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': _('An item with this name already exists')
+                })
+            
+            item.name = value
+            
+        elif field in ['desired_quantity', 'current_quantity']:
+            try:
+                numeric_value = int(value)
+                if numeric_value < 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': _('Quantity cannot be negative')
+                    })
+                setattr(item, field, numeric_value)
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': _('Please enter a valid number')
+                })
+        
+        # Save the item
+        item.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': _('Item updated successfully'),
+            'missing_quantity': item.missing_quantity  # Include updated missing quantity
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': _('An error occurred while updating the item')
+        })
