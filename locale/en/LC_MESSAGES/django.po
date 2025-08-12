@@ -42,11 +42,11 @@ msgid "Shopping list (png)"
 msgstr ""
 
 #: templates/inventory/base.html:92
-msgid "Dark mode"
+msgid "🌘 Dark mode"
 msgstr ""
 
 #: templates/inventory/base.html:92
-msgid "Light mode"
+msgid "🌘 Light mode"
 msgstr ""
 
 #: templates/inventory/index.html:4

@@ -16,7 +16,17 @@
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem(KEY, theme);
         const btn = document.getElementById('theme-toggle');
-        if (btn) btn.textContent = theme === 'dark' ? btn.getAttribute('data-light-label') : btn.getAttribute('data-dark-label');
+        const icon = document.querySelector('.theme-icon');
+        const text = document.querySelector('.theme-text');
+        if (btn && icon && text) {
+          if (theme === 'dark') {
+            icon.textContent = '☀️';
+            text.textContent = btn.getAttribute('data-light-label');
+          } else {
+            icon.textContent = '🌙';
+            text.textContent = btn.getAttribute('data-dark-label');
+          }
+        }
       }
       window.addEventListener('DOMContentLoaded', function() {
         setTheme(document.documentElement.getAttribute('data-theme'));
@@ -58,35 +68,97 @@
             langForm.submit();
           });
         }
+
+        // Hamburger menu functionality
+        const navbarToggle = document.getElementById('navbar-toggle');
+        const navbarNav = document.getElementById('navbar-nav');
+        
+        if (navbarToggle && navbarNav) {
+          navbarToggle.addEventListener('click', function() {
+            navbarNav.classList.toggle('active');
+            navbarToggle.classList.toggle('active');
+          });
+
+          // Close menu when clicking on a nav link (mobile)
+          const navLinks = document.querySelectorAll('.nav-link');
+          navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+              navbarNav.classList.remove('active');
+              navbarToggle.classList.remove('active');
+            });
+          });
+
+          // Close menu when clicking outside (mobile)
+          document.addEventListener('click', function(event) {
+            const isClickInsideNav = navbarNav.contains(event.target);
+            const isClickOnToggle = navbarToggle.contains(event.target);
+            
+            if (!isClickInsideNav && !isClickOnToggle && navbarNav.classList.contains('active')) {
+              navbarNav.classList.remove('active');
+              navbarToggle.classList.remove('active');
+            }
+          });
+        }
       });
     })();
   </script>
 </head>
 <body>
-  <header>
+  <header class="navbar">
     {% load static %}
-    <a href="{% url 'inventory:index' %}" class="logo-link">
-      <img src="{% static 'media/logo.jpeg' %}" alt="Fridgventory Logo" class="logo">
-    </a>
-    <h1>Fridgventory</h1>
-    <nav>
+    <div class="navbar-brand">
+      <a href="{% url 'inventory:index' %}" class="logo-link">
+        <img src="{% static 'media/logo.jpeg' %}" alt="Fridgventory Logo" class="logo">
+      </a>
+      <h1>Fridgventory</h1>
+    </div>
+
+    <!-- Hamburger menu button for mobile -->
+    <button class="navbar-toggle" id="navbar-toggle" aria-label="Toggle navigation">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+
+    <!-- Navigation menu -->
+    <nav class="navbar-nav" id="navbar-nav">
       {% load i18n %}
-      <a href="{% url 'inventory:index' %}" class="btn">{% trans "Home" %}</a>
-      <a href="{% url 'inventory:item_create' %}" class="btn">{% trans "Add Item" %}</a>
-      <a href="{% url 'inventory:shopping_list_text' %}" class="btn">{% trans "Shopping list (txt)" %}</a>
-      <a href="{% url 'inventory:shopping_list_image' %}" class="btn">{% trans "Shopping list (png)" %}</a>
+      <div class="nav-links">
+        <a href="{% url 'inventory:index' %}" class="nav-link">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-text">{% trans "Home" %}</span>
+        </a>
+        <a href="{% url 'inventory:item_create' %}" class="nav-link">
+          <span class="nav-icon">➕</span>
+          <span class="nav-text">{% trans "Add Item" %}</span>
+        </a>
+        <a href="{% url 'inventory:shopping_list_text' %}" class="nav-link">
+          <span class="nav-icon">📝</span>
+          <span class="nav-text">{% trans "Shopping list (txt)" %}</span>
+        </a>
+        <a href="{% url 'inventory:shopping_list_image' %}" class="nav-link">
+          <span class="nav-icon">🖼️</span>
+          <span class="nav-text">{% trans "Shopping list (png)" %}</span>
+        </a>
+      </div>
+
+      <!-- Controls section -->
+      <div class="navbar-controls">
+        <form id="language-form" action="{% url 'set_language' %}" method="post" class="lang-form">
+          {% csrf_token %}
+          <input id="lang-next" type="hidden" name="next" value="{{ request.get_full_path }}" />
+          <input id="language-select" type="hidden" name="language" value="" />
+          <button type="button" id="language-toggle" class="btn lang-btn" title="{% trans 'Switch language' %}">
+            <span class="lang-icon">🌐</span>
+            <span class="lang-code">EN</span>
+          </button>
+        </form>
+        <button id="theme-toggle" class="btn theme-btn" data-dark-label="{% trans "Dark mode" %}" data-light-label="{% trans "Light mode" %}">
+          <span class="theme-icon">🌙</span>
+          <span class="theme-text">{% trans "Dark mode" %}</span>
+        </button>
+      </div>
     </nav>
-    <span class="ml-auto"></span>
-    <form id="language-form" action="{% url 'set_language' %}" method="post" class="lang-form">
-      {% csrf_token %}
-      <input id="lang-next" type="hidden" name="next" value="{{ request.get_full_path }}" />
-      <input id="language-select" type="hidden" name="language" value="" />
-      <button type="button" id="language-toggle" class="btn lang-btn" title="{% trans 'Switch language' %}">
-        <span class="lang-icon">🌐</span>
-        <span class="lang-code">EN</span>
-      </button>
-    </form>
-    <button id="theme-toggle" class="btn" data-dark-label="{% trans "Dark mode" %}" data-light-label="{% trans "Light mode" %}">{% trans "Dark mode" %}</button>
   </header>
   <main>
     {% block content %}{% endblock %}

@@ -1,7 +1,13 @@
 {% extends 'inventory/base.html' %}
 {% load i18n %}
 {% block content %}
-  <h2>{% trans "Items" %}</h2>
+  <div class="page-header">
+    <h2>{% trans "Items" %}</h2>
+    <a href="{% url 'inventory:item_create' %}" class="btn btn-primary add-button" title="{% trans 'Add new item' %}">
+      <span class="btn-icon">➕</span>
+      <span class="btn-text">{% trans "Add Item" %}</span>
+    </a>
+  </div>
   <table>
     <thead>
       <tr>

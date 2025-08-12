@@ -43,8 +43,8 @@ msgid "Shopping list (png)"
 msgstr "Nákupní seznam (png)"
 
 #: templates/inventory/base.html:92
-msgid "Dark mode"
-msgstr "Tmavý režim"
+msgid "🌘 Dark mode"
+msgstr "🌘 Tmavý režim"
 
 #: templates/inventory/base.html:92
 msgid "Light mode"
