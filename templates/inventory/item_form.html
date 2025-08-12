@@ -1,0 +1,29 @@
+{% extends 'inventory/base.html' %}
+{% load i18n %}
+{% block content %}
+  <h2>{% if item %}{% trans "Edit" %}{% else %}{% trans "Add" %}{% endif %} {% trans "item" %}</h2>
+  <form action="" method="post">
+    {% csrf_token %}
+    <label>{% trans "Name" %}</label>
+    <input type="text" name="name" value="{{ item.name|default:'' }}" required />
+
+    <label>{% trans "Desired quantity" %}</label>
+    <input type="number" min="0" step="1" name="desired_quantity" value="{{ item.desired_quantity|default:0 }}" />
+
+    <label>{% trans "Current quantity" %}</label>
+    <input type="number" min="0" step="1" name="current_quantity" value="{{ item.current_quantity|default:0 }}" />
+
+    <label>{% trans "Locations (comma separated)" %}</label>
+    <input type="text" name="locations" value="{% if item %}{% for loc in item.locations.all %}{{ loc.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}" />
+    <div class="help">{% trans "Existing" %}: {% for loc in locations %}{{ loc.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</div>
+
+    <label>{% trans "Tags (comma separated)" %}</label>
+    <input type="text" name="tags" value="{% if item %}{% for tag in item.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}" />
+    <div class="help">{% trans "Existing" %}: {% for tag in tags %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</div>
+
+    <p>
+      <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+      <a class="btn" href="/">{% trans "Cancel" %}</a>
+    </p>
+  </form>
+{% endblock %}
