@@ -48,3 +48,7 @@ Optional: `python manage.py createsuperuser` to access `/admin/`.
 Plugins live under `plugins/` and must expose an `on_ready()` callable in `plugin.py`.
 
 Example plugin seeds locations: `plugins/examples/room_tags/plugin.py`.
+
+## DockerHub
+
+See: [https://hub.docker.com/r/rolllikerollo/fridgventory](https://hub.docker.com/r/rolllikerollo/fridgventory)
