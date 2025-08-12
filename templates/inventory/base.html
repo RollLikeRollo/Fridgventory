@@ -26,36 +26,24 @@
           setTheme(current === 'dark' ? 'light' : 'dark');
         });
 
-        // Language switcher computes a language-prefixed next URL
-        const langSelect = document.getElementById('language-select');
-        const langForm = document.getElementById('language-form');
-        const nextInput = document.getElementById('lang-next');
-        if (langSelect && langForm && nextInput) {
-          langSelect.addEventListener('change', function() {
-            const selected = langSelect.value;
-            const pathname = window.location.pathname;
-            let newPath = pathname;
-            const re = new RegExp('^\/(en|cs)(\/|$)');
-            if (re.test(pathname)) {
-              newPath = pathname.replace(re, `/${selected}$2`);
-            } else {
-              // Prepend language code
-              newPath = `/${selected}` + (pathname.startsWith('/') ? '' : '/') + pathname;
-            }
-            nextInput.value = newPath + window.location.search;
-            langForm.submit();
-          });
-        }
-
         // Language toggle button flips en <-> cs
         const langToggle = document.getElementById('language-toggle');
-        if (langToggle && langSelect && langForm && nextInput) {
+        const langForm = document.getElementById('language-form');
+        const langInput = document.getElementById('language-select');
+        const nextInput = document.getElementById('lang-next');
+        const langCodeDisplay = document.querySelector('.lang-code');
+        
+        if (langToggle && langForm && langInput && nextInput) {
           const path = window.location.pathname;
           const m = path.match(/^\/(en|cs)(\/|$)/);
           const current = m ? m[1] : 'en';
           const target = current === 'en' ? 'cs' : 'en';
-          // Show target language code on the button
-          langToggle.textContent = target.toUpperCase();
+          
+          // Update the display to show current language
+          if (langCodeDisplay) {
+            langCodeDisplay.textContent = current.toUpperCase();
+          }
+          
           langToggle.addEventListener('click', function() {
             const pathname = window.location.pathname;
             let newPath;
@@ -65,7 +53,7 @@
             } else {
               newPath = `/${target}` + (pathname.startsWith('/') ? '' : '/') + pathname;
             }
-            langSelect.value = target;
+            langInput.value = target;
             nextInput.value = newPath + window.location.search;
             langForm.submit();
           });
@@ -76,6 +64,10 @@
 </head>
 <body>
   <header>
+    {% load static %}
+    <a href="{% url 'inventory:index' %}" class="logo-link">
+      <img src="{% static 'media/logo.jpeg' %}" alt="Fridgventory Logo" class="logo">
+    </a>
     <h1>Fridgventory</h1>
     <nav>
       {% load i18n %}
@@ -85,17 +77,15 @@
       <a href="{% url 'inventory:shopping_list_image' %}" class="btn">{% trans "Shopping list (png)" %}</a>
     </nav>
     <span class="ml-auto"></span>
-    {% with current_lang=LANGUAGE_CODE|slice:":2" %}
     <form id="language-form" action="{% url 'set_language' %}" method="post" class="lang-form">
       {% csrf_token %}
       <input id="lang-next" type="hidden" name="next" value="{{ request.get_full_path }}" />
-      <select id="language-select" name="language" type="hidden">
-        <option value="en" type="hidden" {% if current_lang == 'en' %}selected{% endif %}>English</option>
-        <option value="cs" type="hidden" {% if current_lang == 'cs' %}selected{% endif %}>Čeština</option>
-      </select>
-      <button type="button" id="language-toggle" class="btn" title="Toggle language"></button>
+      <input id="language-select" type="hidden" name="language" value="" />
+      <button type="button" id="language-toggle" class="btn lang-btn" title="{% trans 'Switch language' %}">
+        <span class="lang-icon">🌐</span>
+        <span class="lang-code">EN</span>
+      </button>
     </form>
-    {% endwith %}
     <button id="theme-toggle" class="btn" data-dark-label="{% trans "Dark mode" %}" data-light-label="{% trans "Light mode" %}">{% trans "Dark mode" %}</button>
   </header>
   <main>
