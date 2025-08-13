@@ -7,7 +7,7 @@ Fridgventory helps you track what you have, what you need, and where everything 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://hub.docker.com/r/rolllikerollo/fridgventory)
 [![Python](https://img.shields.io/badge/Python-3.11+-green?logo=python)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-5.2+-092e20?logo=django)](https://www.djangoproject.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-GNU-yellow.svg)](LICENSE)
 
 ## AI USE DISCLAIMER
 
@@ -21,13 +21,12 @@ Jan, the main lead.
 ## ✨ Why Fridgventory?
 
 - **🎯 Purpose-Built**: Designed specifically for kitchen inventory, not adapted from generic tools
-- **📱 Modern Interface**: Responsive design that works on phones, tablets, and computers
-- **⚡ Lightning Fast**: Inline editing, quantity adjustment buttons, and real-time updates
+- **📱 Modern Interface**: Responsive design that works on phones, tablets, and computers (hopefully)
+- **⚡ Fast**: Inline editing, quantity adjustment buttons, and real-time updates
 - **🏷️ Smart Organization**: Visual tags and locations with automatic color/emoji assignment
 - **📝 Shopping Lists**: Generate formatted shopping lists as text or images
 - **🌍 Multi-Language**: Built-in internationalization (English/Czech, easily extensible)
 - **🐳 Easy Deployment**: One-command Docker setup or traditional Python installation
-- **🔧 Extensible**: Plugin system for custom functionality
 
 ## 🚀 Key Features
 
@@ -57,9 +56,6 @@ Jan, the main lead.
 - **Sortable tables**: Click any column header to sort
 
 ### 🛠️ **Developer Friendly**
-- **Plugin system**: Extend functionality with custom plugins
-- **Clean codebase**: Well-documented Django application
-- **Easy theming**: CSS custom properties for easy customization
 - **REST-like APIs**: JSON endpoints for modern interactions
 
 ## 🏃‍♂️ Quick Start
@@ -145,8 +141,6 @@ python manage.py runserver
 - **🏠 Home cooks** who want to stay organized
 - **👨‍👩‍👧‍👦 Families** managing multiple food preferences  
 - **🍽️ Meal planners** who prep in advance
-- **🏪 Small food businesses** tracking inventory
-- **🚐 RV/Boat owners** with limited storage space
 - **🏠 Anyone** tired of overbuying or running out of essentials
 
 ## 🔧 Configuration
@@ -212,7 +206,7 @@ We need translators! See [TRANSLATIONS.md](docs/TRANSLATIONS.md) for details.
 
 - **Backend**: Django 5.2+ (Python)
 - **Frontend**: Vanilla JavaScript, modern CSS
-- **Database**: SQLite (default), PostgreSQL/MySQL supported
+- **Database**: SQLite (default)
 - **Styling**: CSS custom properties, responsive design
 - **Deployment**: Docker, traditional Python hosting
 - **Internationalization**: Django i18n framework
@@ -223,17 +217,11 @@ We need translators! See [TRANSLATIONS.md](docs/TRANSLATIONS.md) for details.
 
 ## 🗺️ Roadmap
 
-- [ ] 📱 Progressive Web App (PWA) support
-- [ ] 📊 Usage analytics and insights
-- [ ] 📅 Expiration date tracking
-- [ ] 🔄 Automatic inventory suggestions
-- [ ] 📱 Mobile app (React Native)
-- [ ] 🛒 Grocery store integration APIs
-- [ ] 📈 Nutrition information integration
+- [ ] - Integration with barcode scanner app called BarcodeBuddy -  [BarcodeBuddy project](https://github.com/Forceu/barcodebuddy)
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
