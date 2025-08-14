@@ -213,11 +213,21 @@ We need translators! See [TRANSLATIONS.md](docs/TRANSLATIONS.md) for details.
 
 ## 📸 Screenshots
 
-*Coming soon! We're working on adding screenshots to showcase the interface.*
+### Main Page
+![Main Page](docs/images/main.png "Main Page")
+
+### Settings
+![Settings](docs/images/settings.png "Settings")
+
+### Shopping list
+![Shopping List](docs/images/list.png "Shopping List")
+
 
 ## 🗺️ Roadmap
 
 - [ ] - Integration with barcode scanner app called BarcodeBuddy -  [BarcodeBuddy project](https://github.com/Forceu/barcodebuddy)
+- [ ] - AI shop receipt reader for automatic invenotory population
+- [ ] - Smart way to quickly edit inventory content (probably some kind of text extraction)
 
 ## 📜 License
 
@@ -225,10 +235,8 @@ This project is licensed under the GNU License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built with ❤️ using [Django](https://www.djangoproject.com/)
-- Emoji picker inspired by modern web interfaces
+- Built using [Django](https://www.djangoproject.com/)
 - Icons and emojis from the Unicode standard
-- Community feedback and testing
 
 ---
 
