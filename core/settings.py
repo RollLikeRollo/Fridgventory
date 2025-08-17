@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -105,23 +106,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-def _load_env_file(env_path: Path) -> None:
-    try:
-        if env_path.exists():
-            for line in env_path.read_text(encoding='utf-8').splitlines():
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip().strip('"').strip("'")
-                    os.environ.setdefault(key, value)
-    except Exception:
-        # Fail silently; env file is optional
-        pass
+# def _load_env_file(env_path: Path) -> None:
+#     try:
+#         if env_path.exists():
+#             for line in env_path.read_text(encoding='utf-8').splitlines():
+#                 line = line.strip()
+#                 if not line or line.startswith('#'):
+#                     continue
+#                 if '=' in line:
+#                     key, value = line.split('=', 1)
+#                     key = key.strip()
+#                     value = value.strip().strip('"').strip("'")
+#                     os.environ.setdefault(key, value)
+#     except Exception as e:
+#         print(f"Error loading env file: {e}")
+#         exit(1)
 
-_load_env_file(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env')
 
 LANGUAGE_CODE = os.environ.get('DEFAULT_LANGUAGE', 'en')
 

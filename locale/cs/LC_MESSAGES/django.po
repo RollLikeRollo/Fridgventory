@@ -31,8 +31,8 @@ msgid "Home"
 msgstr "Domů"
 
 #: templates/inventory/base.html:133 templates/inventory/index.html:8
-msgid "Add Item"
-msgstr "Přidat položku"
+msgid "Define New Item"
+msgstr "Definovat novou položku"
 
 #: templates/inventory/base.html:137 templates/inventory/settings.html:5
 msgid "Settings"
