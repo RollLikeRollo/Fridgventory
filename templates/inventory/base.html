@@ -134,8 +134,21 @@
         </a>
         <a href="{% url 'inventory:item_create' %}" class="nav-link">
           <span class="nav-icon">➕</span>
-          <span class="nav-text">{% trans "Add Item" %}</span>
+          <span class="nav-text">{% trans "Define New Item" %}</span>
         </a>
+        
+        <!-- Action buttons group -->
+        <div class="nav-action-group">
+          <button type="button" class="nav-link action-btn" id="consume-btn">
+            <span class="nav-icon">🍽️</span>
+            <span class="nav-text">{% trans "Consume" %}</span>
+          </button>
+          <button type="button" class="nav-link action-btn" id="inventorize-btn">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">{% trans "Inventorize" %}</span>
+          </button>
+        </div>
+        
         <a href="{% url 'inventory:settings' %}" class="nav-link">
           <span class="nav-icon">⚙️</span>
           <span class="nav-text">{% trans "Settings" %}</span>

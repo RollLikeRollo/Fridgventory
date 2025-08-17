@@ -31,7 +31,7 @@ msgid "Home"
 msgstr ""
 
 #: templates/inventory/base.html:133 templates/inventory/index.html:8
-msgid "Add Item"
+msgid "Define New Item"
 msgstr ""
 
 #: templates/inventory/base.html:137 templates/inventory/settings.html:5

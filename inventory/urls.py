@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from .ai import ai
 
 app_name = "inventory"
 
@@ -20,6 +21,13 @@ urlpatterns = [
     path("locations/new/", views.location_create, name="location_create"),
     path("locations/<int:location_id>/edit/", views.location_edit, name="location_edit"),
     path("locations/<int:location_id>/delete/", views.location_delete, name="location_delete"),
+    
+    # API endpoints
+    path("api/autocomplete/tags/", views.autocomplete_tags, name="autocomplete_tags"),
+    path("api/autocomplete/locations/", views.autocomplete_locations, name="autocomplete_locations"),
+    
+    # AI
+    path("ai/get-consumed-suggestions/", ai.get_consumed_suggestions, name="get_consumed_suggestions"),
 ]
 
 

@@ -1,29 +1,194 @@
 {% extends 'inventory/base.html' %}
 {% load i18n %}
 {% block content %}
-  <h2>{% if item %}{% trans "Edit" %}{% else %}{% trans "Add" %}{% endif %} {% trans "item" %}</h2>
-  <form action="" method="post">
-    {% csrf_token %}
-    <label>{% trans "Name" %}</label>
-    <input type="text" name="name" value="{{ item.name|default:'' }}" required />
 
-    <label>{% trans "Desired quantity" %}</label>
-    <input type="number" min="0" step="1" name="desired_quantity" value="{{ item.desired_quantity|default:0 }}" />
+<div class="modern-form-container">
+  <div class="modern-form-card">
+    <div class="form-header">
+      <h2>{% if item %}{% trans "Edit" %}{% else %}{% trans "Add" %}{% endif %} {% trans "item" %}</h2>
+      <p class="form-subtitle">{% if item %}{% trans "Update your inventory item details" %}{% else %}{% trans "Add a new item to your inventory" %}{% endif %}</p>
+    </div>
 
-    <label>{% trans "Current quantity" %}</label>
-    <input type="number" min="0" step="1" name="current_quantity" value="{{ item.current_quantity|default:0 }}" />
+    <form id="item-form" action="" method="post" class="modern-form">
+      {% csrf_token %}
+      
+      <!-- Error/Notification Area -->
+      {% if error %}
+      <div class="form-notifications" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border-color: #ef4444;">
+        <div class="notification-content">
+          <span class="notification-icon">❌</span>
+          <div class="notification-text">
+            <p style="color: #dc2626;">{{ error }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      <!-- New Items Notification Area -->
+      <div id="form-notifications" class="form-notifications" style="display: none;">
+        <div class="notification-content">
+          <span class="notification-icon">ℹ️</span>
+          <div class="notification-text">
+            <p id="notification-message"></p>
+            <ul id="new-items-list" class="new-items-list"></ul>
+          </div>
+        </div>
+      </div>
 
-    <label>{% trans "Locations (comma separated)" %}</label>
-    <input type="text" name="locations" value="{% if item %}{% for loc in item.locations.all %}{{ loc.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}" />
-    <div class="help">{% trans "Existing" %}: {% for loc in locations %}{{ loc.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</div>
+      <div class="form-grid">
+        <!-- Left Column -->
+        <div class="form-column">
+          <div class="form-group">
+            <label for="item-name">{% trans "Name" %}</label>
+            <input 
+              type="text" 
+              id="item-name"
+              name="name" 
+              value="{% if form_data %}{{ form_data.name }}{% else %}{{ item.name|default:'' }}{% endif %}" 
+              placeholder="{% trans 'Enter item name...' %}"
+              required 
+              class="form-input" 
+            />
+          </div>
 
-    <label>{% trans "Tags (comma separated)" %}</label>
-    <input type="text" name="tags" value="{% if item %}{% for tag in item.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}" />
-    <div class="help">{% trans "Existing" %}: {% for tag in tags %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="desired-quantity">{% trans "Desired quantity" %}</label>
+              <input 
+                type="number" 
+                id="desired-quantity"
+                min="0" 
+                step="1" 
+                name="desired_quantity" 
+                value="{% if form_data %}{{ form_data.desired_quantity }}{% else %}{{ item.desired_quantity|default:0 }}{% endif %}" 
+                class="form-input"
+                placeholder="0"
+              />
+            </div>
 
-    <p>
-      <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
-      <a class="btn" href="/">{% trans "Cancel" %}</a>
-    </p>
-  </form>
+            <div class="form-group">
+              <label for="current-quantity">{% trans "Current quantity" %}</label>
+              <input 
+                type="number" 
+                id="current-quantity"
+                min="0" 
+                step="1" 
+                name="current_quantity" 
+                value="{% if form_data %}{{ form_data.current_quantity }}{% else %}{{ item.current_quantity|default:0 }}{% endif %}" 
+                class="form-input"
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="form-column">
+          <div class="form-group">
+            <label for="locations-input">{% trans "Locations" %}</label>
+            <div class="autocomplete-container">
+              <input 
+                type="text" 
+                id="locations-input"
+                name="locations" 
+                value="{% if form_data %}{{ form_data.locations }}{% elif item %}{% for loc in item.locations.all %}{{ loc.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}"
+                placeholder="{% trans 'Type to search locations...' %}"
+                class="form-input autocomplete-input"
+                autocomplete="off"
+              />
+              <div id="locations-dropdown" class="autocomplete-dropdown"></div>
+            </div>
+            <div class="help-text">
+              <span class="help-icon">💡</span>
+              {% trans "Type to see suggestions. Separate multiple locations with commas." %}
+            </div>
+            <div class="existing-items">
+              <strong>{% trans "Existing locations" %}:</strong>
+              <div class="tag-list">
+                {% for loc in locations %}
+                  <span class="tag colored-tag clickable-suggestion" 
+                        data-value="{{ loc.name }}"
+                        data-target="locations-input"
+                        data-color="{{ loc.color }}">
+                    <span class="tag-emoji">{{ loc.emoji }}</span>
+                    <span class="tag-name">{{ loc.name }}</span>
+                  </span>
+                {% empty %}
+                  <span class="empty-hint">{% trans "No locations yet" %}</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tags-input">{% trans "Tags" %}</label>
+            <div class="autocomplete-container">
+              <input 
+                type="text" 
+                id="tags-input"
+                name="tags" 
+                value="{% if form_data %}{{ form_data.tags }}{% elif item %}{% for tag in item.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}"
+                placeholder="{% trans 'Type to search tags...' %}"
+                class="form-input autocomplete-input"
+                autocomplete="off"
+              />
+              <div id="tags-dropdown" class="autocomplete-dropdown"></div>
+            </div>
+            <div class="help-text">
+              <span class="help-icon">💡</span>
+              {% trans "Type to see suggestions. Separate multiple tags with commas." %}
+            </div>
+            <div class="existing-items">
+              <strong>{% trans "Existing tags" %}:</strong>
+              <div class="tag-list">
+                {% for tag in tags %}
+                  <span class="tag colored-tag clickable-suggestion" 
+                        data-value="{{ tag.name }}"
+                        data-target="tags-input"
+                        data-color="{{ tag.color }}">
+                    <span class="tag-emoji">{{ tag.emoji }}</span>
+                    <span class="tag-name">{{ tag.name }}</span>
+                  </span>
+                {% empty %}
+                  <span class="empty-hint">{% trans "No tags yet" %}</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">
+          <span class="btn-icon">💾</span>
+          <span class="btn-text">{% trans "Save" %}</span>
+        </button>
+        <a class="btn btn-secondary" href="{% url 'inventory:index' %}">
+          <span class="btn-icon">❌</span>
+          <span class="btn-text">{% trans "Cancel" %}</span>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Include autocomplete JavaScript -->
+<script src="/static/js/autocomplete-form.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Apply colors to tag elements
+  document.querySelectorAll('[data-color]').forEach(element => {
+    const color = element.getAttribute('data-color');
+    if (color) {
+      element.style.backgroundColor = color;
+      element.style.borderColor = color;
+    }
+  });
+  
+  initializeAutocomplete();
+  initializeClickableSuggestions();
+  initializeFormValidation();
+});
+</script>
+
 {% endblock %}

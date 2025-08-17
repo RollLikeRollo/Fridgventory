@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 from typing import List
 import json
 
@@ -8,6 +9,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+import json
+import requests
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 
 from .models import Item, Location, Tag, UserSettings
 
@@ -26,15 +34,54 @@ def item_create(request: HttpRequest) -> HttpResponse:
         tag_names = [s.strip() for s in request.POST.get("tags", "").split(",") if s.strip()]
 
         if name:
-            item, _ = Item.objects.get_or_create(name=name)
-            item.desired_quantity = desired
-            item.current_quantity = current
-            item.save()
+            # Check for existing item
+            existing_item = Item.objects.filter(name=name).first()
+            if existing_item:
+                return render(
+                    request,
+                    "inventory/item_form.html",
+                    {
+                        "locations": Location.objects.order_by("name").all(),
+                        "tags": Tag.objects.order_by("name").all(),
+                        "error": _("An item with this name already exists"),
+                        "form_data": {
+                            "name": name,
+                            "desired_quantity": desired,
+                            "current_quantity": current,
+                            "locations": ", ".join(location_names),
+                            "tags": ", ".join(tag_names),
+                        }
+                    },
+                )
+            
+            item = Item.objects.create(
+                name=name,
+                desired_quantity=desired,
+                current_quantity=current
+            )
 
-            locations: List[Location] = [Location.objects.get_or_create(name=n)[0] for n in location_names]
-            tags: List[Tag] = [Tag.objects.get_or_create(name=n)[0] for n in tag_names]
+            # Create/get locations and tags, tracking new ones
+            new_locations = []
+            new_tags = []
+            
+            locations = []
+            for name_loc in location_names:
+                loc, created = Location.objects.get_or_create(name=name_loc)
+                locations.append(loc)
+                if created:
+                    new_locations.append(name_loc)
+            
+            tags = []
+            for name_tag in tag_names:
+                tag, created = Tag.objects.get_or_create(name=name_tag)
+                tags.append(tag)
+                if created:
+                    new_tags.append(name_tag)
+            
             item.locations.set(locations)
             item.tags.set(tags)
+            
+            # Success message can be added to session if needed
             return redirect("inventory:index")
 
     locations_all = Location.objects.order_by("name").all()
@@ -48,20 +95,81 @@ def item_create(request: HttpRequest) -> HttpResponse:
 
 def item_edit(request: HttpRequest, item_id: int) -> HttpResponse:
     item = get_object_or_404(Item, id=item_id)
+    
     if request.method == "POST":
-        item.name = request.POST.get("name", item.name).strip() or item.name
-        item.desired_quantity = int(request.POST.get("desired_quantity", item.desired_quantity) or 0)
-        item.current_quantity = int(request.POST.get("current_quantity", item.current_quantity) or 0)
+        name = request.POST.get("name", "").strip()
+        desired = int(request.POST.get("desired_quantity", 0) or 0)
+        current = int(request.POST.get("current_quantity", 0) or 0)
         location_names = [s.strip() for s in request.POST.get("locations", "").split(",") if s.strip()]
         tag_names = [s.strip() for s in request.POST.get("tags", "").split(",") if s.strip()]
 
+        if not name:
+            return render(
+                request,
+                "inventory/item_form.html",
+                {
+                    "item": item,
+                    "locations": Location.objects.order_by("name").all(),
+                    "tags": Tag.objects.order_by("name").all(),
+                    "error": _("Item name is required"),
+                    "form_data": {
+                        "name": name,
+                        "desired_quantity": desired,
+                        "current_quantity": current,
+                        "locations": ", ".join(location_names),
+                        "tags": ", ".join(tag_names),
+                    }
+                },
+            )
+        
+        # Check for duplicate names (excluding current item)
+        existing_item = Item.objects.filter(name=name).exclude(id=item.id).first()
+        if existing_item:
+            return render(
+                request,
+                "inventory/item_form.html",
+                {
+                    "item": item,
+                    "locations": Location.objects.order_by("name").all(),
+                    "tags": Tag.objects.order_by("name").all(),
+                    "error": _("An item with this name already exists"),
+                    "form_data": {
+                        "name": name,
+                        "desired_quantity": desired,
+                        "current_quantity": current,
+                        "locations": ", ".join(location_names),
+                        "tags": ", ".join(tag_names),
+                    }
+                },
+            )
+
+        # Update item
+        item.name = name
+        item.desired_quantity = desired
+        item.current_quantity = current
         item.save()
-        if location_names:
-            locations = [Location.objects.get_or_create(name=n)[0] for n in location_names]
-            item.locations.set(locations)
-        if tag_names:
-            tags = [Tag.objects.get_or_create(name=n)[0] for n in tag_names]
-            item.tags.set(tags)
+
+        # Create/get locations and tags, tracking new ones
+        new_locations = []
+        new_tags = []
+        
+        locations = []
+        for name_loc in location_names:
+            loc, created = Location.objects.get_or_create(name=name_loc)
+            locations.append(loc)
+            if created:
+                new_locations.append(name_loc)
+        
+        tags = []
+        for name_tag in tag_names:
+            tag, created = Tag.objects.get_or_create(name=name_tag)
+            tags.append(tag)
+            if created:
+                new_tags.append(name_tag)
+        
+        item.locations.set(locations)
+        item.tags.set(tags)
+        
         return redirect("inventory:index")
 
     locations_all = Location.objects.order_by("name").all()
@@ -321,3 +429,53 @@ def item_update_field(request: HttpRequest, item_id: int) -> JsonResponse:
             'success': False,
             'error': _('An error occurred while updating the item')
         })
+
+
+def autocomplete_tags(request: HttpRequest) -> JsonResponse:
+    """API endpoint for tag autocomplete."""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # Search for existing tags that match the query
+    tags = Tag.objects.filter(
+        name__icontains=query
+    ).order_by('name')[:10]  # Limit to 10 results
+    
+    results = []
+    for tag in tags:
+        results.append({
+            'id': tag.id,
+            'name': tag.name,
+            'emoji': tag.emoji,
+            'color': tag.color,
+            'type': 'existing'
+        })
+    
+    return JsonResponse({'results': results})
+
+
+def autocomplete_locations(request: HttpRequest) -> JsonResponse:
+    """API endpoint for location autocomplete."""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # Search for existing locations that match the query
+    locations = Location.objects.filter(
+        name__icontains=query
+    ).order_by('name')[:10]  # Limit to 10 results
+    
+    results = []
+    for location in locations:
+        results.append({
+            'id': location.id,
+            'name': location.name,
+            'emoji': location.emoji,
+            'color': location.color,
+            'type': 'existing'
+        })
+    
+    return JsonResponse({'results': results})
+
+

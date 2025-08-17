@@ -3,6 +3,8 @@ version: '3.8'
 services:
   web:
     build: .
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     volumes:
@@ -10,6 +12,13 @@ services:
       - ./media:/app/media
       - sqlite_data:/app
     environment:
+      # AI Provider variables will be loaded from .env file
+      # Uncomment and modify these if you want to override .env values
+      # - MODEL_PROVIDER=ollama
+      # - OLLAMA_API_URL=http://ollama:11434/api/generate
+      # - OLLAMA_MODEL=llama3
+      # - GEMINI_API_KEY=your_api_key_here
+      # - GEMINI_MODEL=gemini-2.0-flash-exp
       - DEBUG=1
       - DEFAULT_LANGUAGE=en
     restart: unless-stopped
@@ -20,5 +29,29 @@ services:
       retries: 3
       start_period: 40s
 
+  # only if you want to use ollama - set MODEL_PROVIDER=ollama in .env file, or set MODEL_PROVIDER=gemini in .env file
+  ollama: 
+    image: docker.io/ollama/ollama:latest
+    ports:
+      - 7869:11434
+    volumes:
+      - .:/code
+      - ./ollama/ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - ollama-docker
+
+networks:
+  ollama-docker:
+    external: false
+
+
 volumes:
+  ollama_data:
   sqlite_data:
