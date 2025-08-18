@@ -29,8 +29,8 @@ from inventory.models import Item
 
 def _get_prompt_for_language(language: str) -> str:
     """Load the appropriate prompt file based on language."""
-    if language == "cz":
-        prompt_file = "prompts/cz_consumtion_analysis.txt"
+    if language == "cs":
+        prompt_file = "prompts/cs_consumtion_analysis.txt"
     else:
         prompt_file = "prompts/en_consumtion_analysis.txt"
     
@@ -166,14 +166,17 @@ def get_consumed_suggestions(request):
         # Here is my current inventory:
         {json.dumps(current_inventory)}
         
-        # Here is the speech of the worker:
+        # Here is the speech of the worker from which you extract the items to be removed from the inventory:
         {user_input}
         """
 
         # Determine which AI provider to use
         model_provider = os.getenv("MODEL_PROVIDER", "ollama").lower()
         
-        while True:
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
             # Call the appropriate API
             func_llm = None
             if model_provider == "gemini":
@@ -189,18 +192,41 @@ def get_consumed_suggestions(request):
 
             # Parse the response
             items_llm = _parse_llm_response(raw_response)
-            if items_llm:
+            print(f"DEBUG: raw_response = {raw_response}")
+            print(f"DEBUG: items_llm = {items_llm}, type = {type(items_llm)}")
+            
+            if items_llm and isinstance(items_llm, list):
                 break
-            print(f"LLM returned an unparseable response: {raw_response}, trying again...")
+            
+            retry_count += 1
+            print(f"LLM returned an unparseable response (attempt {retry_count}/{max_retries}): {raw_response}")
             
 
-        # Fetch the actual Item objects from the database
-        suggested_items = Item.objects.filter(id__in=[item_llm.get("id", None) for item_llm in items_llm])
+        # Check if we exhausted retries or got valid data
+        if not items_llm or not isinstance(items_llm, list):
+            print(f"ERROR: Failed to get valid response after {max_retries} attempts. items_llm = {items_llm}, type: {type(items_llm)}")
+            return JsonResponse({"error": "AI failed to provide valid response after multiple attempts"}, status=500)
         
+        # Fetch the actual Item objects from the database
+        item_ids = []
+        for item_llm in items_llm:
+            if isinstance(item_llm, dict) and "id" in item_llm:
+                item_ids.append(item_llm.get("id"))
+        
+        suggested_items = Item.objects.filter(id__in=item_ids)
+        
+        # Create a mapping of item_id to consumed quantity from AI response
+        consumed_map = {}
+        for item_llm in items_llm:
+            if isinstance(item_llm, dict) and "id" in item_llm and "consumed" in item_llm:
+                consumed_map[item_llm.get("id")] = item_llm.get("consumed", 0)
 
-        # Format the response for the frontend
         response_data = [
-            {"id": item.id, "name": item.name, "consumed": item.current_quantity}
+            {
+                "id": item.id, 
+                "name": item.name, 
+                "consumed": consumed_map.get(item.id, 0)
+            }
             for item in suggested_items
         ]
 

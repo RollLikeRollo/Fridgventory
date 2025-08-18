@@ -115,7 +115,7 @@ message = _("Item saved successfully!")
 
 # In templates
 {% load i18n %}
-{% trans "Add Item" %}
+{% trans "Define New Item" %}
 
 # With variables
 {% blocktrans with name=item.name %}

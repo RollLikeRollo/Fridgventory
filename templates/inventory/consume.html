@@ -1,0 +1,517 @@
+{% extends 'inventory/base.html' %}
+{% load i18n %}
+{% block content %}
+
+<div class="modern-form-container">
+  <div class="modern-form-card">
+    <div class="form-header">
+      <h2>{% trans "Consume Items" %}</h2>
+      <p class="form-subtitle">{% trans "Tell us what you consumed and we'll help update your inventory" %}</p>
+    </div>
+
+    <!-- Results Area -->
+    <div id="consume-results" class="consume-results" style="display: none;">
+      <div class="results-header">
+        <h3>{% trans "Inventory Changes" %}</h3>
+        <p class="results-subtitle">{% trans "Review and adjust the suggested inventory changes before applying:" %}</p>
+      </div>
+      
+      <!-- Interactive Table -->
+      <div class="inventory-table-container">
+                  <table id="inventory-changes-table" class="inventory-table">
+            <thead>
+              <tr>
+                <th>{% trans "Item" %}</th>
+                <th>{% trans "Original" %}</th>
+                <th>{% trans "New Count" %}</th>
+                <th>{% trans "Difference" %}</th>
+                <th>{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+          <tbody id="inventory-changes-tbody">
+            <!-- Rows will be populated by JavaScript -->
+          </tbody>
+        </table>
+        
+        <!-- Add New Row -->
+        <div class="add-row-container">
+          <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input 
+              type="text" 
+              id="add-item-search" 
+              placeholder="{% trans 'Search for item to add...' %}" 
+              class="search-input"
+              autocomplete="off"
+            >
+            <div id="add-item-dropdown" class="item-search-dropdown" style="display: none;">
+              <!-- Search results will be populated here -->
+            </div>
+          </div>
+          <button type="button" id="add-row-btn" class="btn btn-secondary" disabled>
+            <span class="btn-icon">➕</span>
+            <span class="btn-text">{% trans "Add Row" %}</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" id="apply-changes" class="btn btn-primary">
+          <span class="btn-icon">✅</span>
+          <span class="btn-text">{% trans "Apply Changes" %}</span>
+        </button>
+        <button type="button" id="try-again" class="btn btn-secondary">
+          <span class="btn-icon">🔄</span>
+          <span class="btn-text">{% trans "Try Again" %}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Consume Form -->
+    <form id="consume-form" class="modern-form">
+      {% csrf_token %}
+      
+      <!-- Error Area -->
+      <div id="consume-error" class="form-notifications" style="display: none;">
+        <div class="notification-content">
+          <span class="notification-icon">❌</span>
+          <div class="notification-text">
+            <p id="error-message"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="user-input">{% trans "What did you consume?" %}</label>
+        <textarea 
+          id="user-input"
+          name="userInput" 
+          rows="4"
+          placeholder="{% trans 'Example: I ate two oranges and drank all the milk...' %}"
+          class="form-input consume-textarea"
+          required
+        ></textarea>
+        <div class="help-text">
+          <span class="help-icon">💡</span>
+          {% trans "Describe what you consumed in natural language. Be specific about quantities when possible." %}
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="analyze-btn">
+          <span class="btn-icon">🤖</span>
+          <span class="btn-text">{% trans "Analyze Consumption" %}</span>
+        </button>
+        <a class="btn btn-secondary" href="{% url 'inventory:index' %}">
+          <span class="btn-icon">❌</span>
+          <span class="btn-text">{% trans "Cancel" %}</span>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Global state
+let allItems = [];
+let inventoryChanges = [];
+let nextRowId = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
+  initializeConsumeForm();
+});
+
+function initializeConsumeForm() {
+  const form = document.getElementById('consume-form');
+  const userInput = document.getElementById('user-input');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const errorDiv = document.getElementById('consume-error');
+  const errorMessage = document.getElementById('error-message');
+  const resultsDiv = document.getElementById('consume-results');
+  
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const inputValue = userInput.value.trim();
+    if (!inputValue) {
+      showError('{% trans "Please enter what you consumed" %}');
+      return;
+    }
+    
+    // Show loading state
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">{% trans "Analyzing..." %}</span>';
+    hideError();
+    
+    // Get current language for i18n
+    const currentPath = window.location.pathname;
+    const langMatch = currentPath.match(/^\/(en|cs)/);
+    const currentLang = langMatch ? langMatch[1] : 'en';
+    
+    try {
+      const response = await fetch('{% url "inventory:consume" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          userInput: inputValue,
+          language: currentLang
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || '{% trans "An error occurred" %}');
+      }
+      
+      // Store data and show results
+      allItems = data.all_items || [];
+      inventoryChanges = data.suggestions || [];
+      displayInteractiveTable();
+      
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      // Reset button
+      analyzeBtn.disabled = false;
+      analyzeBtn.innerHTML = '<span class="btn-icon">🤖</span><span class="btn-text">{% trans "Analyze Consumption" %}</span>';
+    }
+  });
+  
+  // Try again button
+  document.getElementById('try-again').addEventListener('click', function() {
+    resultsDiv.style.display = 'none';
+    form.style.display = 'block';
+    userInput.focus();
+  });
+  
+  // Apply changes button
+  document.getElementById('apply-changes').addEventListener('click', function() {
+    applyInventoryChanges();
+  });
+  
+  // Add row functionality
+  initializeAddRowFunctionality();
+}
+
+function displayInteractiveTable() {
+  const resultsDiv = document.getElementById('consume-results');
+  const form = document.getElementById('consume-form');
+  const tbody = document.getElementById('inventory-changes-tbody');
+  
+  // Clear existing rows
+  tbody.innerHTML = '';
+  
+  // Populate table with suggestions
+  inventoryChanges.forEach((change, index) => {
+    addTableRow(change, `ai-${index}`);
+  });
+  
+  // No need to populate dropdown anymore - search-based
+  
+  // Show results, hide form
+  form.style.display = 'none';
+  resultsDiv.style.display = 'block';
+}
+
+function addTableRow(change, rowId) {
+  const tbody = document.getElementById('inventory-changes-tbody');
+  const row = document.createElement('tr');
+  row.dataset.rowId = rowId;
+  
+  row.innerHTML = `
+    <td class="item-cell">
+      <div class="item-info">
+        <span class="item-name">${change.name}</span>
+        <div class="item-meta">
+          ${change.locations ? change.locations.map(loc => `<span class="meta-tag" style="background-color: ${loc.color}20; border-color: ${loc.color}; color: ${loc.color};">${loc.emoji} ${loc.name}</span>`).join('') : ''}
+          ${change.tags ? change.tags.map(tag => `<span class="meta-tag" style="background-color: ${tag.color}20; border-color: ${tag.color}; color: ${tag.color};">${tag.emoji} ${tag.name}</span>`).join('') : ''}
+        </div>
+      </div>
+    </td>
+    <td class="quantity-cell">
+      <span class="original-quantity">${change.current_quantity}</span>
+    </td>
+    <td class="new-quantity-cell">
+      <div class="quantity-controls">
+        <button type="button" class="quantity-btn decrease" onclick="adjustQuantity('${rowId}', -1)">−</button>
+        <input type="number" class="quantity-input" value="${change.suggested_new_quantity}" min="0" onchange="updateQuantity('${rowId}', this.value)" oninput="updateDifferenceDisplay('${rowId}')">
+        <button type="button" class="quantity-btn increase" onclick="adjustQuantity('${rowId}', 1)">+</button>
+      </div>
+    </td>
+          <td class="difference-cell">
+        <span class="difference-value">${calculateDifference(change.current_quantity, change.suggested_new_quantity)}</span>
+      </td>
+    <td class="actions-cell">
+      <button type="button" class="delete-btn" onclick="deleteRow('${rowId}')" title="{% trans 'Delete row' %}">
+        <span class="btn-icon">🗑️</span>
+      </button>
+    </td>
+  `;
+  
+  tbody.appendChild(row);
+}
+
+function calculateDifference(original, newQuantity) {
+  const diff = original - newQuantity;
+  if (diff > 0) {
+    return `<span class="consumed-badge">-${diff}</span>`;
+  } else if (diff < 0) {
+    return `<span class="added-badge">+${Math.abs(diff)}</span>`;
+  } else {
+    return `<span class="no-change-badge">0</span>`;
+  }
+}
+
+function adjustQuantity(rowId, delta) {
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  const input = row.querySelector('.quantity-input');
+  const newValue = Math.max(0, parseInt(input.value) + delta);
+  input.value = newValue;
+  updateQuantity(rowId, newValue);
+  updateDifferenceDisplay(rowId);
+}
+
+function updateQuantity(rowId, newValue) {
+  // Update the corresponding inventory change
+  const changeIndex = inventoryChanges.findIndex(c => `ai-${inventoryChanges.indexOf(c)}` === rowId || c.rowId === rowId);
+  if (changeIndex !== -1) {
+    inventoryChanges[changeIndex].suggested_new_quantity = parseInt(newValue);
+    
+    // Update the difference display dynamically
+    updateDifferenceDisplay(rowId);
+  }
+}
+
+function updateDifferenceDisplay(rowId) {
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  const differenceCell = row.querySelector('.difference-value');
+  const quantityInput = row.querySelector('.quantity-input');
+  
+  // Find the change object to get original quantity
+  const change = inventoryChanges.find(c => 
+    `ai-${inventoryChanges.indexOf(c)}` === rowId || c.rowId === rowId
+  );
+  
+  if (change && differenceCell && quantityInput) {
+    const originalQuantity = change.current_quantity;
+    const newQuantity = parseInt(quantityInput.value) || 0;
+    differenceCell.innerHTML = calculateDifference(originalQuantity, newQuantity);
+  }
+}
+
+function deleteRow(rowId) {
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  if (row) {
+    row.remove();
+    // Remove from inventoryChanges array
+    inventoryChanges = inventoryChanges.filter((c, index) => 
+      `ai-${index}` !== rowId && c.rowId !== rowId
+    );
+  }
+}
+
+function initializeAddRowFunctionality() {
+  const searchInput = document.getElementById('add-item-search');
+  const dropdown = document.getElementById('add-item-dropdown');
+  const addBtn = document.getElementById('add-row-btn');
+  let selectedItem = null;
+  let highlightedIndex = -1;
+  let filteredItems = [];
+  
+  // Search functionality
+  searchInput.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    
+    if (query.length < 1) {
+      hideDropdown();
+      return;
+    }
+    
+    // Filter available items (exclude those already in table)
+    const currentItemIds = inventoryChanges.map(c => c.id);
+    filteredItems = allItems.filter(item => {
+      return !currentItemIds.includes(item.id) && 
+             item.name.toLowerCase().includes(query);
+    }).slice(0, 10); // Limit to 10 results
+    
+    showSearchResults(filteredItems);
+  });
+  
+  // Keyboard navigation
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightedIndex = Math.min(highlightedIndex + 1, filteredItems.length - 1);
+      updateHighlight();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightedIndex = Math.max(highlightedIndex - 1, -1);
+      updateHighlight();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && filteredItems[highlightedIndex]) {
+        selectSearchItem(filteredItems[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      hideDropdown();
+    }
+  });
+  
+  // Focus and blur events
+  searchInput.addEventListener('focus', function() {
+    if (this.value.trim() && filteredItems.length > 0) {
+      dropdown.style.display = 'block';
+    }
+  });
+  
+  searchInput.addEventListener('blur', function() {
+    // Delay hiding to allow for clicks on dropdown items
+    setTimeout(() => {
+      if (!dropdown.matches(':hover')) {
+        hideDropdown();
+      }
+    }, 150);
+  });
+  
+  function showSearchResults(items) {
+    if (items.length === 0) {
+      dropdown.innerHTML = '<div class="search-dropdown-item no-results">{% trans "No items found" %}</div>';
+    } else {
+      dropdown.innerHTML = items.map((item, index) => `
+        <div class="search-dropdown-item" data-item-id="${item.id}" data-index="${index}">
+          <div class="search-item-info">
+            <span class="search-item-name">${item.name}</span>
+            <span class="search-item-quantity">{% trans "Current" %}: ${item.current_quantity}</span>
+          </div>
+        </div>
+      `).join('');
+      
+      // Add click listeners to search items
+      dropdown.querySelectorAll('.search-dropdown-item[data-item-id]').forEach(item => {
+        item.addEventListener('mousedown', function(e) {
+          e.preventDefault(); // Prevent blur
+          const itemId = parseInt(this.dataset.itemId);
+          const selectedItem = items.find(item => item.id === itemId);
+          if (selectedItem) {
+            selectSearchItem(selectedItem);
+          }
+        });
+        
+        item.addEventListener('mouseenter', function() {
+          highlightedIndex = parseInt(this.dataset.index);
+          updateHighlight();
+        });
+      });
+    }
+    
+    dropdown.style.display = 'block';
+    highlightedIndex = -1;
+  }
+  
+  function updateHighlight() {
+    dropdown.querySelectorAll('.search-dropdown-item').forEach((item, index) => {
+      item.classList.toggle('highlighted', index === highlightedIndex);
+    });
+  }
+  
+  function selectSearchItem(item) {
+    selectedItem = item;
+    searchInput.value = item.name;
+    addBtn.disabled = false;
+    hideDropdown();
+  }
+  
+  function hideDropdown() {
+    dropdown.style.display = 'none';
+    highlightedIndex = -1;
+  }
+  
+  // Add button functionality
+  addBtn.addEventListener('click', function() {
+    if (!selectedItem) return;
+    
+    // Create new change object
+    const newChange = {
+      id: selectedItem.id,
+      name: selectedItem.name,
+      current_quantity: selectedItem.current_quantity,
+      suggested_new_quantity: selectedItem.current_quantity,
+      rowId: `manual-${nextRowId}`
+    };
+    
+    // Add to changes array
+    inventoryChanges.push(newChange);
+    
+    // Add row to table
+    addTableRow(newChange, `manual-${nextRowId}`);
+    
+    // Reset search
+    searchInput.value = '';
+    addBtn.disabled = true;
+    selectedItem = null;
+    nextRowId++;
+    
+    // Hide dropdown
+    hideDropdown();
+  });
+}
+
+
+
+async function applyInventoryChanges() {
+  const applyBtn = document.getElementById('apply-changes');
+  
+  // Show loading state
+  applyBtn.disabled = true;
+  applyBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">{% trans "Applying..." %}</span>';
+  
+  try {
+    const response = await fetch('{% url "inventory:apply_consume_changes" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        changes: inventoryChanges
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || '{% trans "An error occurred" %}');
+    }
+    
+    // Show success message
+    const updatedCount = data.updated_items ? data.updated_items.length : 0;
+    alert(`{% trans "Inventory updated successfully!" %}\n${updatedCount} {% trans "items were updated." %}`);
+    
+    // Redirect to main inventory
+    window.location.href = '{% url "inventory:index" %}';
+    
+  } catch (error) {
+    showError(error.message);
+    
+    // Reset button
+    applyBtn.disabled = false;
+    applyBtn.innerHTML = '<span class="btn-icon">✅</span><span class="btn-text">{% trans "Apply Changes" %}</span>';
+  }
+}
+
+function showError(message) {
+  const errorDiv = document.getElementById('consume-error');
+  const errorMessage = document.getElementById('error-message');
+  errorMessage.textContent = message;
+  errorDiv.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('consume-error').style.display = 'none';
+}
+</script>
+{% endblock %}

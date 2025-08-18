@@ -2199,4 +2199,363 @@ form label {
   }
 }
 
+/* Consume Page Specific Styles */
+.consume-results {
+  margin-bottom: 2rem;
+}
+
+.results-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.results-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.results-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+/* Interactive Table Styles */
+.inventory-table-container {
+  margin-bottom: 2rem;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg);
+}
+
+.inventory-table thead {
+  background: var(--btn-bg);
+  color: white;
+}
+
+.inventory-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+
+.inventory-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.inventory-table tbody tr:hover {
+  background: var(--btn-secondary-bg);
+}
+
+.inventory-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Table Cell Styles */
+.item-cell {
+  min-width: 200px;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.quantity-cell {
+  text-align: center;
+  width: 80px;
+}
+
+.original-quantity {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.new-quantity-cell {
+  width: 150px;
+}
+
+.quantity-input {
+  width: 60px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 1rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.quantity-input:focus {
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.difference-cell {
+  width: 100px;
+  text-align: center;
+}
+
+.difference-value {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.consumed-badge {
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid #fca5a5;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.added-badge {
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid #86efac;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.no-change-badge {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  background: var(--btn-secondary-bg);
+}
+
+.actions-cell {
+  width: 80px;
+  text-align: center;
+}
+
+.difference-cell {
+  text-align: center;
+  vertical-align: middle;
+  width: 100px;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-width: 60px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+}
+
+/* Add Row Container */
+.add-row-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--btn-secondary-bg);
+  border-top: 1px solid var(--border);
+}
+
+.add-row-container .search-container {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+.add-row-container .search-input {
+  width: 100%;
+  margin: 0;
+}
+
+/* Consume textarea */
+.consume-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+/* Search dropdown for add items */
+.item-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 9999;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-dropdown-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s ease;
+}
+
+.search-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.search-dropdown-item:hover,
+.search-dropdown-item.highlighted {
+  background: var(--btn-secondary-bg);
+}
+
+.search-dropdown-item.no-results {
+  cursor: default;
+  color: var(--muted);
+  text-align: center;
+  padding: 1rem;
+}
+
+.search-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.search-item-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.search-item-quantity {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Mobile Responsive for Consume Page */
+@media (max-width: 768px) {
+  .inventory-table-container {
+    overflow-x: auto;
+  }
+  
+  .inventory-table {
+    min-width: 700px;
+  }
+  
+  .inventory-table th,
+  .inventory-table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .item-cell {
+    min-width: 150px;
+  }
+  
+  .item-name {
+    font-size: 0.9rem;
+  }
+  
+  .meta-tag {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+  }
+  
+  .quantity-controls {
+    gap: 0.125rem;
+  }
+  
+  .quantity-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+  
+  .quantity-input {
+    width: 50px;
+    padding: 0.4rem;
+    font-size: 0.9rem;
+  }
+  
+  .add-row-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .add-row-container .search-container {
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventory-table {
+    min-width: 600px;
+  }
+  
+  .inventory-table th,
+  .inventory-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .item-name {
+    font-size: 0.85rem;
+  }
+  
+  .original-quantity {
+    font-size: 1rem;
+  }
+}
+
 
