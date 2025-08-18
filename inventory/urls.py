@@ -26,6 +26,10 @@ urlpatterns = [
     path("api/autocomplete/tags/", views.autocomplete_tags, name="autocomplete_tags"),
     path("api/autocomplete/locations/", views.autocomplete_locations, name="autocomplete_locations"),
     
+    # Action views
+    path("consume/", views.consume_view, name="consume"),
+    path("consume/apply/", views.apply_consume_changes, name="apply_consume_changes"),
+    
     # AI
     path("ai/get-consumed-suggestions/", ai.get_consumed_suggestions, name="get_consumed_suggestions"),
 ]

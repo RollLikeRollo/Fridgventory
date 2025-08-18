@@ -17,6 +17,8 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 
+
+from inventory.ai.ai import *
 from .models import Item, Location, Tag, UserSettings
 
 
@@ -477,5 +479,131 @@ def autocomplete_locations(request: HttpRequest) -> JsonResponse:
         })
     
     return JsonResponse({'results': results})
+
+
+def consume_view(request: HttpRequest) -> HttpResponse:
+    """View for the consume form where users can input what they consumed."""
+    
+    if request.method == "POST":
+        # Handle AJAX form submission
+        if request.content_type == 'application/json':
+            try:
+                import json
+                data = json.loads(request.body)
+                user_input = data.get('userInput', '').strip()
+                language = data.get('language', 'en')
+                
+                print(f"User input: {data}")
+                
+                if not user_input:
+                    return JsonResponse({'error': _('Please enter what you consumed')}, status=400)
+                
+                # Get AI suggestions
+                ai_response = get_consumed_suggestions(request)
+                
+                # If AI response is successful, enhance it with current inventory data
+                if hasattr(ai_response, 'content'):
+                    import json
+                    try:
+                        ai_data = json.loads(ai_response.content.decode('utf-8'))
+                        if 'suggestions' in ai_data:
+                            # Enhance suggestions with current inventory data
+                            enhanced_suggestions = []
+                            for suggestion in ai_data['suggestions']:
+                                try:
+                                    # Find the item in inventory
+                                    item = Item.objects.get(id=suggestion['id'])
+                                    enhanced_suggestion = {
+                                        'id': item.id,
+                                        'name': item.name,
+                                        'current_quantity': item.current_quantity,
+                                        'consumed_quantity': suggestion['consumed'],
+                                        'suggested_new_quantity': max(0, item.current_quantity - suggestion['consumed']),
+                                        'locations': [{'name': loc.name, 'emoji': loc.emoji, 'color': loc.color} for loc in item.locations.all()],
+                                        'tags': [{'name': tag.name, 'emoji': tag.emoji, 'color': tag.color} for tag in item.tags.all()]
+                                    }
+                                    enhanced_suggestions.append(enhanced_suggestion)
+                                except Item.DoesNotExist:
+                                    continue
+                            
+                            # Return enhanced data
+                            return JsonResponse({
+                                'success': True,
+                                'suggestions': enhanced_suggestions,
+                                'all_items': [
+                                    {
+                                        'id': item.id,
+                                        'name': item.name,
+                                        'current_quantity': item.current_quantity
+                                    } for item in Item.objects.all().order_by('name')
+                                ]
+                            })
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                
+                return ai_response
+                
+            except json.JSONDecodeError:
+                return JsonResponse({'error': _('Invalid request format')}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': str(e)}, status=500)
+    
+    # Show the consume form
+    return render(request, "inventory/consume.html")
+
+
+@csrf_exempt
+def apply_consume_changes(request: HttpRequest) -> JsonResponse:
+    """Apply the finalized consumption changes to inventory."""
+    if request.method != "POST":
+        return JsonResponse({'error': _('Method not allowed')}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        changes = data.get('changes', [])
+        
+        if not changes:
+            return JsonResponse({'error': _('No changes to apply')}, status=400)
+        
+        updated_items = []
+        
+        # Apply each change
+        for change in changes:
+            try:
+                item_id = change.get('id')
+                new_quantity = change.get('suggested_new_quantity', 0)
+                
+                if item_id is None or new_quantity < 0:
+                    continue
+                
+                # Get and update the item
+                item = Item.objects.get(id=item_id)
+                old_quantity = item.current_quantity
+                item.current_quantity = new_quantity
+                item.save()
+                
+                updated_items.append({
+                    'id': item.id,
+                    'name': item.name,
+                    'old_quantity': old_quantity,
+                    'new_quantity': new_quantity
+                })
+                
+            except Item.DoesNotExist:
+                continue
+            except (KeyError, ValueError, TypeError):
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'message': _('Inventory updated successfully'),
+            'updated_items': updated_items
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': _('Invalid request format')}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': _('An error occurred while updating inventory')}, status=500)
 
 

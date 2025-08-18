@@ -139,10 +139,10 @@
         
         <!-- Action buttons group -->
         <div class="nav-action-group">
-          <button type="button" class="nav-link action-btn" id="consume-btn">
+          <a href="{% url 'inventory:consume' %}" class="nav-link action-btn" id="consume-btn">
             <span class="nav-icon">🍽️</span>
             <span class="nav-text">{% trans "Consume" %}</span>
-          </button>
+          </a>
           <button type="button" class="nav-link action-btn" id="inventorize-btn">
             <span class="nav-icon">📊</span>
             <span class="nav-text">{% trans "Inventorize" %}</span>
